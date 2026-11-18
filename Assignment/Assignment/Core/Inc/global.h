@@ -31,12 +31,6 @@
 #define NUM_BUTTONS             4       /* BTN_1..BTN_4 (D7..D10)              */
 #define NUM_SW_TIMERS           10      /* software timers available           */
 
-/* Software timer indices: each owner uses ONLY its own, so timers never clash */
-#define TIMER_AUTO              0       /* A: fsm_automatic                    */
-#define TIMER_MANUAL            1       /* B: fsm_manual                       */
-#define TIMER_TUNING            2       /* C: fsm_tuning                       */
-#define TIMER_LCD               3       /* C: LCD refresh                      */
-
 /* Default light durations, in seconds (tuning mode changes these) */
 #define DEFAULT_TIME_RED        5
 #define DEFAULT_TIME_GREEN      3
@@ -185,7 +179,7 @@ extern float dht20_humidity;        /* percent RH                            */
  */
 
 /* ========================================================================== */
-/* 6. Button assignment                       */
+/* 6. Button assignment (agree on this in the group)                          */
 /* ========================================================================== */
 
 #define BTN_MODE        0   /* switch mode: AUTO -> MANUAL -> TUNING -> AUTO  */
