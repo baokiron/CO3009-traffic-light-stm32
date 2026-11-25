@@ -1,27 +1,49 @@
 /*
- * traffic_light.c
- *
- * Muc dich: Dieu khien den giao thong cua hai duong theo mau (OFF, RED, GREEN, AMBER).
- *           Duoc phep goi HAL (HAL_GPIO_WritePin).
- * Chu file: Thanh vien C
- *
- * TODO (theo TASKS.md - C.2):
- * - traffic_init(): Tat ca hai duong (LIGHT_OFF).
- * - traffic_set(road, color): road la 1 hoac 2; color la LIGHT_OFF, LIGHT_RED,
- *   LIGHT_GREEN, LIGHT_AMBER. Doi mau thanh cap tin hieu (A, B) theo bang thuc do
- *   o C.1 roi ghi ra chan TL1_A/TL1_B hoac TL2_A/TL2_B.
- * - Luu y: Dung dung bang thuc do, khong chep bang mau; duong 1 va duong 2 doc lap.
+ * traffic_light.c - Dieu khien den giao thong 2 duong (Owner: C)
+ * Duoc phep goi HAL (HAL_GPIO_WritePin).
  */
 
 #include "traffic_light.h"
 #include "main.h"
 
-void traffic_init(void)
+/* Cap tin hieu (A, B) cho tung mau.
+ * !!! CAC SO DUOI DAY CHI LA CHO TRONG - PHAI DIEN THEO BANG THUC DO O BUOC C.1 !!!
+ * Hang = LightColor, cot 0 = tin hieu A, cot 1 = tin hieu B. */
+static const uint8_t SIG[4][2] = {
+    [LIGHT_OFF]   = {0, 0},   /* <- sua theo bang do */
+    [LIGHT_RED]   = {0, 1},   /* <- sua theo bang do */
+    [LIGHT_GREEN] = {1, 0},   /* <- sua theo bang do */
+    [LIGHT_AMBER] = {1, 1},   /* <- sua theo bang do */
+};
+
+/* Mau dang hien thi, chi so 1..NUM_ROADS. Xem bang Live Expressions khi debug. */
+static LightColor last_color[NUM_ROADS + 1];
+
+static void traffic_write(uint8_t road, uint8_t a, uint8_t b)
 {
-    /* TODO */
+    GPIO_PinState sa = a ? GPIO_PIN_SET : GPIO_PIN_RESET;
+    GPIO_PinState sb = b ? GPIO_PIN_SET : GPIO_PIN_RESET;
+
+    if (road == 1) {
+        HAL_GPIO_WritePin(TL1_A_GPIO_Port, TL1_A_Pin, sa);
+        HAL_GPIO_WritePin(TL1_B_GPIO_Port, TL1_B_Pin, sb);
+    } else {
+        HAL_GPIO_WritePin(TL2_A_GPIO_Port, TL2_A_Pin, sa);
+        HAL_GPIO_WritePin(TL2_B_GPIO_Port, TL2_B_Pin, sb);
+    }
 }
 
 void traffic_set(uint8_t road, LightColor color)
 {
-    /* TODO */
+    if ((road != 1 && road != 2) || (unsigned)color > (unsigned)LIGHT_AMBER) {
+        return;                         /* tham so sai: bo qua, khong dung den */
+    }
+    traffic_write(road, SIG[color][0], SIG[color][1]);
+    last_color[road] = color;
+}
+
+void traffic_init(void)
+{
+    traffic_set(1, LIGHT_OFF);
+    traffic_set(2, LIGHT_OFF);
 }
