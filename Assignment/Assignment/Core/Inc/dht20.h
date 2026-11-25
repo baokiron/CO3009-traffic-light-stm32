@@ -8,7 +8,8 @@
 #include <stdint.h>
 
 void    dht20_init(void);
-uint8_t dht20_read(void);   /* returns 1 on success, updates dht20_temperature / dht20_humidity */
-void    dht20_task(void);   /* scheduled task, period ~2 s */
+uint8_t dht20_trigger(void); /* sends the measure command; read the result >= 80 ms later */
+uint8_t dht20_read(void);    /* returns 1 on success, updates dht20_temperature / dht20_humidity */
+void    dht20_task(void);    /* scheduled task, period ~2 s */
 
 #endif /* INC_DHT20_H_ */
