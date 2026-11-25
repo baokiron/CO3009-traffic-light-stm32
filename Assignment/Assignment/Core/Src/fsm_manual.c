@@ -1,19 +1,20 @@
 /*
- * fsm_manual.c
+ * fsm_manual.c - Che do thu cong (Owner: B)
  *
- * Muc dich: May trang thai che do thu cong (Manual), nguoi dung tu doi
- *           trang thai den bang nut nhan.
- * Chu file: Thanh vien B
+ * BTN_NEXT: sang trang thai ke tiep, cung thu tu voi che do tu dong:
+ *   RED1_GREEN2 -> RED1_AMBER2 -> GREEN1_RED2 -> AMBER1_RED2 -> RED1_GREEN2
+ * BTN_MODE: sang MODE_TUNING (status = TUNE_INIT).
  *
- * TODO (theo TASKS.md - B.3):
- * - MAN_INIT: Dat hai duong ve trang thai an toan, ve man hinh LCD che do thu cong,
- *   chuyen sang trang thai dau (vi du MAN_RED1_GREEN2).
- * - MAN_RED1_GREEN2 .. MAN_AMBER1_RED2: Giu nguyen den cua trang thai do.
- *   Nhan BTN_NEXT -> sang trang thai ke tiep theo cung thu tu voi che do tu dong.
- * - Chuyen che do: Nhan BTN_MODE -> dat mode = MODE_TUNING, status = TUNE_INIT.
- * - Quyet dinh & ghi vao bao cao: chuyen che do khi den dang vang thi den ke tiep
- *   la gi; co can ep ve trang thai an toan truoc khi sang trang thai ke tiep khong.
- * - Luu y: Khong goi HAL trong file nay; khong bao gio de hai duong cung xanh.
+ * Quyet dinh thiet ke (ghi vao bao cao):
+ *  - Moi lan vao che do (MAN_INIT) ca hai duong deu DO truoc, roi moi sang trang thai dau
+ *    => khong bao gio xanh/vang kep tu che do truoc.
+ *  - Chuyen che do luc dang vang: bo qua vang con lai, FSM tuning (TUNE_INIT) dat ca hai
+ *    duong DO ngay (trang thai an toan), khong cho het vang.
+ *  - Moi trang thai chi co toi da mot duong khong do, nen khong the hai duong cung xanh.
+ *  - Moi lan nhan BTN_NEXT chuyen thang sang trang thai ke tiep (khong dem thoi gian).
+ *
+ * LCD: chi ve dong 0 (du 16 ky tu, khong lcd_clear) vi dong 1 do lcd_env_task quan ly.
+ * Khong goi HAL trong file nay.
  */
 
 #include "fsm_manual.h"
@@ -22,24 +23,76 @@
 #include "traffic_light.h"
 #include "lcd.h"
 
+static void manual_flush_buttons(void)          /* bo cac lan nhan con ton tu che do truoc */
+{
+    for (uint8_t i = 0; i < NUM_BUTTONS; i++) {
+        isButtonPressed(i);
+        isButtonLongPressed(i);
+    }
+}
+
+static void manual_enter(SystemState s, LightColor c1, LightColor c2, const char *line)
+{
+    traffic_set(1, c1);
+    traffic_set(2, c2);
+    lcd_set_cursor(0, 0);
+    lcd_print(line);                            /* 16 ky tu */
+    status = s;
+}
+
+/* Dat den + man hinh cua trang thai s (khong doi status ngoai s). */
+static void manual_apply(SystemState s)
+{
+    switch (s) {
+    case MAN_RED1_GREEN2:
+        manual_enter(s, LIGHT_RED,   LIGHT_GREEN, "MANUAL 1:R 2:G  ");
+        break;
+    case MAN_RED1_AMBER2:
+        manual_enter(s, LIGHT_RED,   LIGHT_AMBER, "MANUAL 1:R 2:A  ");
+        break;
+    case MAN_GREEN1_RED2:
+        manual_enter(s, LIGHT_GREEN, LIGHT_RED,   "MANUAL 1:G 2:R  ");
+        break;
+    case MAN_AMBER1_RED2:
+        manual_enter(s, LIGHT_AMBER, LIGHT_RED,   "MANUAL 1:A 2:R  ");
+        break;
+    default:
+        break;
+    }
+}
+
+static SystemState manual_next(SystemState s)
+{
+    switch (s) {
+    case MAN_RED1_GREEN2: return MAN_RED1_AMBER2;
+    case MAN_RED1_AMBER2: return MAN_GREEN1_RED2;
+    case MAN_GREEN1_RED2: return MAN_AMBER1_RED2;
+    default:              return MAN_RED1_GREEN2;
+    }
+}
+
 void fsm_manual_run(void)
 {
     switch (status) {
     case MAN_INIT:
-        /* TODO */
+        traffic_set(1, LIGHT_RED);              /* an toan truoc: ca hai duong do */
+        traffic_set(2, LIGHT_RED);
+        manual_flush_buttons();
+        manual_apply(MAN_RED1_GREEN2);
         break;
+
     case MAN_RED1_GREEN2:
-        /* TODO */
-        break;
     case MAN_RED1_AMBER2:
-        /* TODO */
-        break;
     case MAN_GREEN1_RED2:
-        /* TODO */
-        break;
     case MAN_AMBER1_RED2:
-        /* TODO */
+        if (isButtonPressed(BTN_MODE)) {
+            mode   = MODE_TUNING;
+            status = TUNE_INIT;                 /* TUNE_INIT dat hai duong ve do */
+        } else if (isButtonPressed(BTN_NEXT)) {
+            manual_apply(manual_next(status));
+        }
         break;
+
     default:
         break;
     }
